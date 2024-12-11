@@ -4,6 +4,11 @@ main = "src/index.js"
 compatibility_date = "2024-12-05"
 compatibility_flags = ["nodejs_compat"]
 
+# Custom domain configuration
+routes = [
+    { pattern = "cdn.designxdevelop.com", custom_domain = true }
+]
+
 # Workers Logs
 # Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
 # Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
@@ -112,3 +117,8 @@ enabled = true
 # [[vectorize]]
 # binding = "MY_INDEX"
 # index_name = "my-index"
+
+# Bind an R2 Bucket for CDN storage
+[[r2_buckets]]
+binding = "CDN_BUCKET"
+bucket_name = "dxd-cdn"
