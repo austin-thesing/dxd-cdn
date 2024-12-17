@@ -114,7 +114,7 @@ https://your-domain.com/my-project/v1.0.0/dist/script.min.js
 
 ### URL Converter Tool
 
-Visit `https://your-domain.com` for a web interface that provides:
+Visit `https://your-domain.com/convert` for a web interface that provides:
 
 - Convert GitHub URLs to CDN URLs
 - Convert JSDelivr URLs to CDN URLs
