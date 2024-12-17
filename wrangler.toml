@@ -16,5 +16,10 @@ bucket_name = "dxd-cdn"
 
 # Secret for GitHub API access
 # Add your GitHub token using: wrangler secret put GITHUB_TOKEN
+
+# Secret for Sentry DSN
+# Add your Sentry DSN using: wrangler secret put SENTRY_DSN
+
 [vars]
-# Add any non-secret environment variables here
+ENVIRONMENT = "production"
+# Add any other non-secret environment variables here

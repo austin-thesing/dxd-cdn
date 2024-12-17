@@ -4,12 +4,14 @@
 	"description": "Custom CDN implementation for serving files from GitHub repositories",
 	"main": "src/index.js",
 	"scripts": {
-		"build": "esbuild src/index.js --bundle --outfile=dist/worker.js --format=esm --loader:.html=text",
+		"build": "esbuild src/index.js --bundle --outfile=dist/worker.js --format=esm --loader:.html=text --external:@sentry/node --platform=node --sourcemap --plugins:@sentry/esbuild-plugin={authToken:process.env.SENTRY_AUTH_TOKEN,org:\"dxd-llc\",project:\"dxd-cdn\"}",
 		"deploy": "npm run build && wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev"
 	},
 	"dependencies": {
+		"@sentry/esbuild-plugin": "^2.22.7",
+		"@sentry/node": "^7.91.0",
 		"clean-css": "^5.3.2",
 		"terser": "^5.26.0"
 	},
