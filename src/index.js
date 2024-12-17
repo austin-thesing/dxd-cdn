@@ -270,49 +270,75 @@ const PORTAL_HTML = `<!DOCTYPE html>
         <h1 class="text-3xl font-bold text-gray-800 mb-8">DXD CDN URL Converter</h1>
         
         <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="github-url">
-                    GitHub File URL
-                </label>
-                <input type="text" id="github-url" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="https://github.com/austin-thesing/repo/blob/main/src/file.js">
+            <!-- Tab Buttons -->
+            <div class="flex mb-6 border-b">
+                <button id="github-tab" class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600">
+                    GitHub URL
+                </button>
+                <button id="jsdelivr-tab" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    JSDelivr URL
+                </button>
             </div>
 
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Options</label>
-                <div class="space-y-2">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="minify" class="form-checkbox h-4 w-4 text-blue-600">
-                        <span class="ml-2 text-gray-700">Minify output (.min)</span>
+            <!-- GitHub URL Input -->
+            <div id="github-form">
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="github-url">
+                        GitHub File URL
                     </label>
+                    <input type="text" id="github-url" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://github.com/austin-thesing/repo/blob/main/src/file.js">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Options</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="minify" class="form-checkbox h-4 w-4 text-blue-600">
+                            <span class="ml-2 text-gray-700">Minify output (.min)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Version Type</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="radio" name="version-type" value="commit" class="form-radio h-4 w-4 text-blue-600" checked>
+                            <span class="ml-2 text-gray-700">Use commit</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="version-type" value="release" class="form-radio h-4 w-4 text-blue-600">
+                            <span class="ml-2 text-gray-700">Use release version</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="version-type" value="latest" class="form-radio h-4 w-4 text-blue-600">
+                            <span class="ml-2 text-gray-700">Use latest release</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="version-selector" class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Select Version</label>
+                    <select id="version-select" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Paste a GitHub URL above to load versions...</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Version Type</label>
-                <div class="space-y-2">
-                    <label class="flex items-center">
-                        <input type="radio" name="version-type" value="commit" class="form-radio h-4 w-4 text-blue-600" checked>
-                        <span class="ml-2 text-gray-700">Use commit</span>
+            <!-- JSDelivr URL Input -->
+            <div id="jsdelivr-form" class="hidden">
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="jsdelivr-url">
+                        JSDelivr URL
                     </label>
-                    <label class="flex items-center">
-                        <input type="radio" name="version-type" value="release" class="form-radio h-4 w-4 text-blue-600">
-                        <span class="ml-2 text-gray-700">Use release version</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" name="version-type" value="latest" class="form-radio h-4 w-4 text-blue-600">
-                        <span class="ml-2 text-gray-700">Use latest release</span>
-                    </label>
+                    <input type="text" id="jsdelivr-url" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://cdn.jsdelivr.net/gh/austin-thesing/repo@version/file.js">
+                    <p class="mt-2 text-sm text-gray-500">Example: https://cdn.jsdelivr.net/gh/austin-thesing/utm-cookie@2319025/params.min.js</p>
                 </div>
-            </div>
-
-            <div id="version-selector" class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Select Version</label>
-                <select id="version-select" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">Paste a GitHub URL above to load versions...</option>
-                </select>
             </div>
 
             <button id="convert" 
@@ -404,49 +430,76 @@ const PORTAL_HTML = `<!DOCTYPE html>
             radio.addEventListener('change', updateVersionSelector);
         });
 
+        // Tab switching
+        document.getElementById('github-tab').addEventListener('click', () => {
+            document.getElementById('github-tab').classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById('jsdelivr-tab').classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById('github-form').classList.remove('hidden');
+            document.getElementById('jsdelivr-form').classList.add('hidden');
+        });
+
+        document.getElementById('jsdelivr-tab').addEventListener('click', () => {
+            document.getElementById('jsdelivr-tab').classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById('github-tab').classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById('jsdelivr-form').classList.remove('hidden');
+            document.getElementById('github-form').classList.add('hidden');
+        });
+
         document.getElementById('convert').addEventListener('click', async () => {
-            const githubUrl = document.getElementById('github-url').value;
-            const shouldMinify = document.getElementById('minify').checked;
-            const versionType = document.querySelector('input[name="version-type"]:checked').value;
-            
             try {
-                // Parse GitHub URL
-                const urlParts = githubUrl.match(/github\\.com\\/([^\\/]+)\\/([^\\/]+)(?:\\/blob\\/([^\\/]+))?\\/(.+)/);
-                if (!urlParts) {
-                    throw new Error('Invalid GitHub URL format');
-                }
-
-                const [, owner, repoWithGit, , path] = urlParts;
-                const repo = repoWithGit.replace(/\\.git$/, ''); // Remove .git if present
+                let cdnUrl;
                 
-                if (owner !== '${DEFAULT_GITHUB_OWNER}') {
-                    throw new Error('Repository must be under ${DEFAULT_GITHUB_OWNER}');
-                }
+                if (!document.getElementById('github-form').classList.contains('hidden')) {
+                    // Handle GitHub URL conversion
+                    const githubUrl = document.getElementById('github-url').value;
+                    const shouldMinify = document.getElementById('minify').checked;
+                    const versionType = document.querySelector('input[name="version-type"]:checked').value;
+                    
+                    // Parse GitHub URL
+                    const urlParts = githubUrl.match(/github\\.com\\/([^\\/]+)\\/([^\\/]+)(?:\\/blob\\/([^\\/]+))?\\/(.+)/);
+                    if (!urlParts) {
+                        throw new Error('Invalid GitHub URL format');
+                    }
 
-                // Get version
-                let version;
-                if (versionType === 'latest') {
-                    version = 'latest';
+                    const [, owner, repoWithGit, , path] = urlParts;
+                    const repo = repoWithGit.replace(/\\.git$/, '');
+                    
+                    if (owner !== '${DEFAULT_GITHUB_OWNER}') {
+                        throw new Error('Repository must be under ${DEFAULT_GITHUB_OWNER}');
+                    }
+
+                    let version;
+                    if (versionType === 'latest') {
+                        version = 'latest';
+                    } else {
+                        version = document.getElementById('version-select').value;
+                        if (!version) {
+                            throw new Error('Please select a version');
+                        }
+                    }
+
+                    let cdnPath = path;
+                    if (shouldMinify) {
+                        const ext = path.split('.').pop();
+                        if (ext === 'js' || ext === 'css') {
+                            cdnPath = path.replace('.' + ext, '.min.' + ext);
+                        }
+                    }
+
+                    cdnUrl = \`https://cdn.designxdevelop.com/\${repo}/\${version}/\${cdnPath}\`;
                 } else {
-                    const selectedVersion = document.getElementById('version-select').value;
-                    if (!selectedVersion) {
-                        throw new Error('Please select a version');
+                    // Handle JSDelivr URL conversion
+                    const jsdelivrUrl = document.getElementById('jsdelivr-url').value;
+                    const match = jsdelivrUrl.match(/cdn\\.jsdelivr\\.net\\/gh\\/${DEFAULT_GITHUB_OWNER}\\/([^\\/]+)@([^\\/]+)\\/(.+)/);
+                    
+                    if (!match) {
+                        throw new Error('Invalid JSDelivr URL format or not from ${DEFAULT_GITHUB_OWNER}');
                     }
-                    version = selectedVersion;
+
+                    const [, repo, version, path] = match;
+                    cdnUrl = \`https://cdn.designxdevelop.com/\${repo}/\${version}/\${path}\`;
                 }
 
-                // Construct CDN URL
-                let cdnPath = path;
-                if (shouldMinify) {
-                    const ext = path.split('.').pop();
-                    if (ext === 'js' || ext === 'css') {
-                        cdnPath = path.replace('.' + ext, '.min.' + ext);
-                    }
-                }
-
-                const cdnUrl = \`https://cdn.designxdevelop.com/\${repo}/\${version}/\${cdnPath}\`;
-
-                // Show result
                 document.getElementById('result').classList.remove('hidden');
                 document.getElementById('cdn-url').value = cdnUrl;
             } catch (error) {
@@ -468,24 +521,326 @@ const PORTAL_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const SPEED_TEST_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDN Speed Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">CDN Speed Test</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="jsdelivr-url">
+                    JSDelivr URL
+                </label>
+                <input type="text" id="jsdelivr-url" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://cdn.jsdelivr.net/gh/austin-thesing/repo@version/file.js">
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Test Options</label>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="number" id="test-count" value="5" min="1" max="10"
+                            class="w-20 px-2 py-1 border border-gray-300 rounded-md">
+                        <span class="ml-2 text-gray-700">Number of tests to run</span>
+                    </label>
+                </div>
+            </div>
+
+            <button id="run-test" 
+                class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                Run Speed Test
+            </button>
+
+            <div id="results" class="mt-6 hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Test Results</h2>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- JSDelivr Results -->
+                    <div class="p-4 border rounded-lg">
+                        <h3 class="font-bold text-lg mb-2">JSDelivr</h3>
+                        <div id="jsdelivr-results">
+                            <div class="space-y-2">
+                                <p>DNS: <span id="jsdelivr-dns" class="font-mono">-</span></p>
+                                <p>Connect: <span id="jsdelivr-connect" class="font-mono">-</span></p>
+                                <p>TTFB: <span id="jsdelivr-ttfb" class="font-mono">-</span></p>
+                                <p>Download: <span id="jsdelivr-download" class="font-mono">-</span></p>
+                                <p>Total: <span id="jsdelivr-total" class="font-mono">-</span></p>
+                                <p>Server: <span id="jsdelivr-server" class="font-mono text-sm">-</span></p>
+                                <p>Cache: <span id="jsdelivr-cache" class="font-mono text-sm">-</span></p>
+                                <p>Size: <span id="jsdelivr-size" class="font-mono text-sm">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DXD CDN Results -->
+                    <div class="p-4 border rounded-lg">
+                        <h3 class="font-bold text-lg mb-2">DXD CDN</h3>
+                        <div id="dxd-results">
+                            <div class="space-y-2">
+                                <p>DNS: <span id="dxd-dns" class="font-mono">-</span></p>
+                                <p>Connect: <span id="dxd-connect" class="font-mono">-</span></p>
+                                <p>TTFB: <span id="dxd-ttfb" class="font-mono">-</span></p>
+                                <p>Download: <span id="dxd-download" class="font-mono">-</span></p>
+                                <p>Total: <span id="dxd-total" class="font-mono">-</span></p>
+                                <p>Server: <span id="dxd-server" class="font-mono text-sm">-</span></p>
+                                <p>Cache: <span id="dxd-cache" class="font-mono text-sm">-</span></p>
+                                <p>Size: <span id="dxd-size" class="font-mono text-sm">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <h3 class="font-bold text-lg mb-2">Summary</h3>
+                    <div id="summary" class="p-4 border rounded-lg">
+                        <p class="text-lg font-semibold" id="winner">-</p>
+                        <p class="text-sm text-gray-600" id="difference">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function measureTiming(url) {
+            const start = performance.now();
+            const response = await fetch(url + '?t=' + Date.now(), {
+                method: 'GET',
+                mode: 'cors',
+            });
+            const end = performance.now();
+            
+            // Get server location and cache status from headers
+            const server = response.headers.get('cf-ray')?.split('-')[1] || 
+                          response.headers.get('server-timing') || 
+                          'Unknown';
+            
+            const cacheStatus = response.headers.get('cf-cache-status') || 
+                               response.headers.get('x-cache') ||
+                               'Unknown';
+
+            const fileSize = response.headers.get('content-length') || 'Unknown';
+
+            // Get performance data
+            const entry = performance.getEntriesByName(url).pop();
+            const timing = {
+                dns: entry ? entry.domainLookupEnd - entry.domainLookupStart : 0,
+                connect: entry ? entry.connectEnd - entry.connectStart : 0,
+                ttfb: entry ? entry.responseStart - entry.requestStart : 0,
+                download: entry ? entry.responseEnd - entry.responseStart : 0,
+                total: end - start,
+                server: server,
+                cache: cacheStatus,
+                size: formatFileSize(fileSize)
+            };
+
+            // Clear performance buffer
+            performance.clearResourceTimings();
+            
+            return timing;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 'Unknown') return bytes;
+            bytes = parseInt(bytes);
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatTime(ms) {
+            return \`\${ms.toFixed(2)}ms\`;
+        }
+
+        function updateResults(cdn, results) {
+            document.getElementById(\`\${cdn}-dns\`).textContent = formatTime(results.dns);
+            document.getElementById(\`\${cdn}-connect\`).textContent = formatTime(results.connect);
+            document.getElementById(\`\${cdn}-ttfb\`).textContent = formatTime(results.ttfb);
+            document.getElementById(\`\${cdn}-download\`).textContent = formatTime(results.download);
+            document.getElementById(\`\${cdn}-total\`).textContent = formatTime(results.total);
+            document.getElementById(\`\${cdn}-server\`).textContent = results.server;
+            document.getElementById(\`\${cdn}-cache\`).textContent = results.cache;
+            document.getElementById(\`\${cdn}-size\`).textContent = results.size;
+        }
+
+        async function runTest() {
+            const jsdelivrUrl = document.getElementById('jsdelivr-url').value;
+            if (!jsdelivrUrl) {
+                alert('Please enter a JSDelivr URL');
+                return;
+            }
+
+            // Convert to DXD CDN URL
+            const match = jsdelivrUrl.match(/cdn\\.jsdelivr\\.net\\/gh\\/${DEFAULT_GITHUB_OWNER}\\/([^\\/]+)@([^\\/]+)\\/(.+)/);
+            if (!match) {
+                alert('Invalid JSDelivr URL format');
+                return;
+            }
+
+            const [, repo, version, path] = match;
+            const dxdUrl = \`https://cdn.designxdevelop.com/\${repo}/\${version}/\${path}\`;
+
+            document.getElementById('results').classList.remove('hidden');
+            document.getElementById('run-test').disabled = true;
+            document.getElementById('run-test').textContent = 'Running Tests...';
+
+            const testCount = parseInt(document.getElementById('test-count').value) || 5;
+            let jsdelivrTotal = { dns: 0, connect: 0, ttfb: 0, download: 0, total: 0 };
+            let dxdTotal = { dns: 0, connect: 0, ttfb: 0, download: 0, total: 0 };
+            let jsdelivrServer, dxdServer, jsdelivrCache, dxdCache, jsdelivrSize, dxdSize;
+
+            // Clear browser DNS and connection cache
+            await clearBrowserCache();
+
+            // Warm up both CDNs and wait longer to ensure caches are primed
+            console.log('Warming up CDNs...');
+            const warmupJsdelivr = await measureTiming(jsdelivrUrl);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const warmupDxd = await measureTiming(dxdUrl);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Store initial cache and size information
+            jsdelivrCache = warmupJsdelivr.cache;
+            dxdCache = warmupDxd.cache;
+            jsdelivrSize = warmupJsdelivr.size;
+            dxdSize = warmupDxd.size;
+
+            // Run the actual tests with delays between each test
+            for (let i = 0; i < testCount; i++) {
+                // Add a random delay between tests (2-4 seconds)
+                const delay = 2000 + Math.random() * 2000;
+                await new Promise(resolve => setTimeout(resolve, delay));
+
+                // Alternate between CDNs to be fair
+                const [timing1, timing2] = i % 2 === 0 
+                    ? [await measureTiming(jsdelivrUrl), await measureTiming(dxdUrl)]
+                    : [await measureTiming(dxdUrl), await measureTiming(jsdelivrUrl)];
+
+                // Sum up results for the correct CDN
+                if (i % 2 === 0) {
+                    addTiming(jsdelivrTotal, timing1);
+                    addTiming(dxdTotal, timing2);
+                } else {
+                    addTiming(dxdTotal, timing1);
+                    addTiming(jsdelivrTotal, timing2);
+                }
+
+                // Store server locations
+                jsdelivrServer = timing1.server;
+                dxdServer = timing2.server;
+
+                // Update progress
+                document.getElementById('run-test').textContent = 
+                    \`Running Tests... \${Math.round(((i + 1) / testCount) * 100)}%\`;
+            }
+
+            // Calculate averages
+            Object.keys(jsdelivrTotal).forEach(key => {
+                if (key !== 'server') {
+                    jsdelivrTotal[key] /= testCount;
+                    dxdTotal[key] /= testCount;
+                }
+            });
+
+            // Set the final results
+            jsdelivrTotal.server = jsdelivrServer;
+            jsdelivrTotal.cache = jsdelivrCache;
+            jsdelivrTotal.size = jsdelivrSize;
+            dxdTotal.server = dxdServer;
+            dxdTotal.cache = dxdCache;
+            dxdTotal.size = dxdSize;
+
+            // Update results display
+            updateResults('jsdelivr', jsdelivrTotal);
+            updateResults('dxd', dxdTotal);
+
+            // Show summary with more detailed information
+            const diff = jsdelivrTotal.total - dxdTotal.total;
+            const winner = diff > 0 ? 'DXD CDN' : 'JSDelivr';
+            const percentage = Math.abs((diff / jsdelivrTotal.total) * 100);
+
+            const summary = document.getElementById('summary');
+            summary.innerHTML = \`
+                <p class="text-lg font-semibold">🏆 \${winner} was faster!</p>
+                <p class="text-sm text-gray-600">Average difference: \${formatTime(Math.abs(diff))} (\${percentage.toFixed(1)}%)</p>
+                <p class="text-sm text-gray-600 mt-2">Cache Status: JSDelivr (\${jsdelivrCache}) | DXD (\${dxdCache})</p>
+                <p class="text-sm text-gray-600">Server Location: JSDelivr (\${jsdelivrServer}) | DXD (\${dxdServer})</p>
+                <p class="text-sm text-gray-600">File Size: JSDelivr (\${jsdelivrSize}) | DXD (\${dxdSize})</p>
+            \`;
+
+            document.getElementById('run-test').disabled = false;
+            document.getElementById('run-test').textContent = 'Run Speed Test';
+        }
+
+        // Helper function to add timing results
+        function addTiming(total, timing) {
+            Object.keys(total).forEach(key => {
+                if (key !== 'server' && key !== 'cache' && key !== 'size') {
+                    total[key] += timing[key];
+                }
+            });
+        }
+
+        // Helper function to clear browser cache
+        async function clearBrowserCache() {
+            if (window.caches) {
+                try {
+                    const keys = await window.caches.keys();
+                    await Promise.all(keys.map(key => window.caches.delete(key)));
+                } catch (e) {
+                    console.warn('Failed to clear browser cache:', e);
+                }
+            }
+            // Clear performance data
+            performance.clearResourceTimings();
+            // Clear DNS cache by adding a timestamp to the URL
+            return new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        document.getElementById('run-test').addEventListener('click', runTest);
+    </script>
+</body>
+</html>`;
+
 export default {
 	async fetch(request, env, ctx) {
 		try {
 			const url = new URL(request.url);
 			const path = url.pathname.slice(1);
 
-			// Serve the converter portal at /convert
-			if (path === 'convert') {
-				return new Response(PORTAL_HTML, {
-					headers: {
-						'Content-Type': 'text/html',
-						'Cache-Control': 'public, max-age=3600',
-					},
-				});
+			// Handle special pages
+			if (path === 'speed-test' || path === 'convert') {
+				return handleSpecialPages(path);
 			}
 
 			if (!path) {
 				return new Response('Not Found', { status: 404 });
+			}
+
+			// Try to get from cache first with ETag support
+			const cache = caches.default;
+			const cacheKey = new Request(url.toString(), request);
+			let response = await cache.match(cacheKey);
+
+			// Check if we have a fresh cache hit
+			if (response) {
+				const etag = request.headers.get('If-None-Match');
+				if (etag && response.headers.get('ETag') === etag) {
+					return new Response(null, { status: 304 });
+				}
+				response = new Response(response.body, response);
+				response.headers.set('CF-Cache-Status', 'HIT');
+				return response;
 			}
 
 			// Parse path components: /:repo/:version/:file
@@ -508,12 +863,10 @@ export default {
 				return new Response('Invalid path format. Use: /repo/version/file-path', { status: 400 });
 			}
 
-			let response;
 			const extension = filePath.split('.').pop().toLowerCase();
-			const contentType = CONTENT_TYPES[extension] || 'application/octet-stream';
 
 			try {
-				// First try R2 bucket with exact path (including .min if requested)
+				// First try R2 bucket with exact path
 				const r2Path = `${repo}/${version}/${filePath}${shouldMinify ? '.min' : ''}`;
 				let r2Object = await env.CDN_BUCKET.get(r2Path);
 
@@ -526,44 +879,32 @@ export default {
 				}
 
 				if (r2Object) {
-					const extension = filePath.split('.').pop().toLowerCase();
-					const acceptHeader = request.headers.get('Accept') || '';
-					const isScriptRequest =
-						acceptHeader.includes('application/javascript') ||
-						acceptHeader.includes('text/javascript') ||
-						acceptHeader.includes('text/css');
-
-					let responseContent = await r2Object.text();
-
-					const headers = {
-						'Content-Type': CONTENT_TYPES[extension] || 'text/plain; charset=utf-8',
-						Vary: 'Accept-Encoding, Accept',
-						'X-Content-Type-Options': 'nosniff',
-						'Content-Disposition': 'inline',
-					};
-
-					// Only compress if it's a script/link request and client supports gzip
-					if (isScriptRequest && request.headers.get('Accept-Encoding')?.includes('gzip')) {
-						const compressedContent = await compress(responseContent, 'gzip');
-						if (compressedContent) {
-							responseContent = compressedContent;
-							headers['Content-Encoding'] = 'gzip';
-						}
-					}
-
-					response = new Response(responseContent, { headers });
-					console.log(`Served ${r2Path} from R2`);
+					response = await handleR2Response(r2Object, extension, request);
 				} else {
-					response = await getFileFromGitHub(repo, version, filePath, env, ctx, shouldMinify, request);
-					console.log(`Served ${r2Path} from GitHub`);
+					response = await handleGitHubResponse(repo, version, filePath, env, ctx, shouldMinify, request);
 				}
 
-				// Add CORS and caching headers
-				const finalHeaders = new Headers(response.headers);
-				finalHeaders.set('Cache-Control', 'public, max-age=31536000');
-				finalHeaders.set('Access-Control-Allow-Origin', '*');
+				// Set aggressive caching headers
+				const headers = new Headers(response.headers);
+				headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+				headers.set('Access-Control-Allow-Origin', '*');
+				headers.set('CF-Cache-Status', r2Object ? 'R2_HIT' : 'R2_MISS');
 
-				return new Response(response.body, { headers: finalHeaders });
+				// Add ETag for caching
+				const etag = `"${repo}-${version}-${filePath}-${Date.now()}"`;
+				headers.set('ETag', etag);
+
+				// Create final response
+				response = new Response(response.body, {
+					headers,
+					status: response.status,
+					statusText: response.statusText,
+				});
+
+				// Cache in Cloudflare's edge with ETag
+				ctx.waitUntil(cache.put(cacheKey, response.clone()));
+
+				return response;
 			} catch (error) {
 				return new Response(`File not found: ${error.message}`, { status: 404 });
 			}
@@ -572,3 +913,87 @@ export default {
 		}
 	},
 };
+
+async function handleR2Response(r2Object, extension, request) {
+	const acceptHeader = request.headers.get('Accept') || '';
+	const isScriptRequest =
+		acceptHeader.includes('application/javascript') || acceptHeader.includes('text/javascript') || acceptHeader.includes('text/css');
+
+	// Get content length before any transformations
+	const contentLength = r2Object.size;
+
+	// Stream the response instead of loading it all into memory
+	let responseBody = r2Object.body;
+	let headers = new Headers({
+		'Content-Type': CONTENT_TYPES[extension] || 'text/plain; charset=utf-8',
+		Vary: 'Accept-Encoding, Accept',
+		'X-Content-Type-Options': 'nosniff',
+		'Content-Disposition': 'inline',
+		ETag: r2Object.httpEtag,
+		'Last-Modified': r2Object.uploaded.toUTCString(),
+		'Cache-Control': 'public, max-age=31536000, immutable',
+		'CDN-Cache-Control': 'max-age=31536000',
+		'Cloudflare-CDN-Cache-Control': 'max-age=31536000',
+		'Content-Length': contentLength,
+		'Access-Control-Allow-Origin': '*',
+		'Access-Control-Expose-Headers': 'Content-Length, Content-Type, ETag',
+		'CF-Cache-Control': 'max-age=31536000',
+		'Edge-Control': 'cache-maxage=31536000',
+		'Surrogate-Control': 'max-age=31536000',
+		Priority: 'high',
+	});
+
+	// Early compression for text-based files
+	if ((isScriptRequest || extension === 'js' || extension === 'css') && request.headers.get('Accept-Encoding')?.includes('gzip')) {
+		const cs = new CompressionStream('gzip');
+		const writer = cs.writable.getWriter();
+		writer.write(await r2Object.arrayBuffer());
+		writer.close();
+		responseBody = cs.readable;
+		headers.set('Content-Encoding', 'gzip');
+		// Remove content-length as it's no longer accurate after compression
+		headers.delete('Content-Length');
+	}
+
+	return new Response(responseBody, { headers });
+}
+
+async function handleGitHubResponse(repo, version, filePath, env, ctx, shouldMinify, request) {
+	const response = await getFileFromGitHub(repo, version, filePath, env, ctx, shouldMinify, request);
+	const contentLength = response.headers.get('content-length');
+
+	const headers = new Headers(response.headers);
+	headers.set('X-Served-From', 'GitHub');
+	headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+	headers.set('CDN-Cache-Control', 'max-age=31536000');
+	headers.set('Cloudflare-CDN-Cache-Control', 'max-age=31536000');
+	headers.set('CF-Cache-Control', 'max-age=31536000');
+	headers.set('Edge-Control', 'cache-maxage=31536000');
+	headers.set('Surrogate-Control', 'max-age=31536000');
+	headers.set('Priority', 'high');
+
+	if (contentLength) {
+		headers.set('Content-Length', contentLength);
+	}
+
+	// Add preload hints for common resources
+	if (filePath.endsWith('.js')) {
+		headers.set('Link', '</style.css>; rel=preload; as=style, </script.js>; rel=preload; as=script');
+	}
+
+	// Stream the response
+	return new Response(response.body, {
+		headers,
+		status: response.status,
+		statusText: response.statusText,
+	});
+}
+
+function handleSpecialPages(path) {
+	const html = path === 'speed-test' ? SPEED_TEST_HTML : PORTAL_HTML;
+	const headers = {
+		'Content-Type': 'text/html',
+		'Cache-Control': path === 'speed-test' ? 'no-store' : 'public, max-age=3600',
+	};
+	return new Response(html, { headers });
+}
