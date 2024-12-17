@@ -1,0 +1,45 @@
+export const CONTENT_TYPES = {
+	js: 'application/javascript; charset=utf-8',
+	css: 'text/css; charset=utf-8',
+	html: 'text/html; charset=utf-8',
+	json: 'application/json; charset=utf-8',
+	png: 'image/png',
+	jpg: 'image/jpeg',
+	jpeg: 'image/jpeg',
+	gif: 'image/gif',
+	svg: 'image/svg+xml',
+	webp: 'image/webp',
+	woff: 'font/woff',
+	woff2: 'font/woff2',
+	ttf: 'font/ttf',
+	eot: 'application/vnd.ms-fontobject',
+	pdf: 'application/pdf',
+	txt: 'text/plain; charset=utf-8',
+	md: 'text/markdown; charset=utf-8',
+	xml: 'text/xml; charset=utf-8',
+	yaml: 'text/yaml; charset=utf-8',
+	yml: 'text/yaml; charset=utf-8',
+};
+
+export const PREVIEW_TYPES = new Set([
+	'pdf',
+	'html',
+	'htm',
+	'jpg',
+	'jpeg',
+	'png',
+	'gif',
+	'svg',
+	'webp',
+	'js',
+	'css',
+	'json',
+	'txt',
+	'md',
+	'xml',
+	'yaml',
+	'yml',
+]);
+
+export const DEFAULT_GITHUB_OWNER = 'austin-thesing';
+export const GITHUB_CACHE_TTL = 300000; // 5 minutes in milliseconds

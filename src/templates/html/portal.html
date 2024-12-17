@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>DXD CDN - Convert URLs</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<style>
+			.notification {
+				position: fixed;
+				top: 1rem;
+				left: 50%;
+				transform: translateX(-50%) translateY(-150%);
+				padding: 0.75rem 1.5rem;
+				color: white;
+				border-radius: 0.375rem;
+				transition: transform 0.2s ease-out;
+				z-index: 50;
+				text-align: center;
+				min-width: 300px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			}
+			.notification.show {
+				transform: translateX(-50%) translateY(0);
+			}
+			.notification.success {
+				background-color: #4f46e5;
+			}
+			.notification.error {
+				background-color: #dc2626;
+			}
+		</style>
+	</head>
+	<body class="bg-gray-50">
+		<div class="min-h-screen flex flex-col">
+			<header class="bg-white shadow">
+				<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+					<h1 class="text-3xl font-bold text-gray-900">DXD CDN</h1>
+				</div>
+			</header>
+			<main class="flex-grow">
+				<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+					<div class="px-4 py-6 sm:px-0">
+						<div class="bg-white shadow rounded-lg p-6">
+							<h2 class="text-xl font-semibold mb-4">Convert URLs</h2>
+							<div class="space-y-4">
+								<div>
+									<label for="input-url" class="block text-sm font-medium text-gray-700">Input URL</label>
+									<input
+										type="text"
+										id="input-url"
+										class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+										placeholder="Enter GitHub or JSDelivr URL"
+									/>
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-2">Select Version or Commit</label>
+									<div class="space-y-2">
+										<label class="inline-flex items-center">
+											<input type="radio" name="version-type" value="commit" class="form-radio text-indigo-600" checked />
+											<span class="ml-2">Commit</span>
+										</label>
+										<label class="inline-flex items-center ml-4">
+											<input type="radio" name="version-type" value="version" class="form-radio text-indigo-600" />
+											<span class="ml-2">Version</span>
+										</label>
+									</div>
+									<div id="commit-container" class="mt-2">
+										<select
+											id="commit-select"
+											class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+										>
+											<option value="">Select a commit...</option>
+										</select>
+									</div>
+									<div id="version-container" class="mt-2 hidden">
+										<select
+											id="version-select"
+											class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+										>
+											<option value="">Select a version...</option>
+										</select>
+									</div>
+								</div>
+								<div>
+									<label class="flex items-center space-x-2">
+										<input type="checkbox" id="minify" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked />
+										<span class="text-sm text-gray-700">Minify</span>
+									</label>
+								</div>
+								<div>
+									<label class="flex items-center space-x-2">
+										<input type="checkbox" id="pre-cache" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+										<span class="text-sm text-gray-700">Pre-cache file in CDN</span>
+									</label>
+								</div>
+								<div>
+									<label for="dxd-url" class="block text-sm font-medium text-gray-700">DXD CDN URL</label>
+									<input
+										type="text"
+										id="dxd-url"
+										class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50"
+										readonly
+									/>
+								</div>
+								<div class="flex justify-between">
+									<button
+										id="convert"
+										class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+									>
+										Convert
+									</button>
+									<button
+										id="copy"
+										class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+									>
+										Copy URL
+										<span class="ml-2 text-sm text-gray-500">⌘C</span>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
+			<footer class="bg-white border-t border-gray-200">
+				<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+					<p class="text-center text-gray-500 text-sm">DXD CDN - A custom CDN implementation for serving files from GitHub repositories</p>
+				</div>
+			</footer>
+		</div>
+		<div id="notification" class="notification">URL copied to clipboard</div>
+		<script>
+			const inputUrl = document.getElementById('input-url');
+			const minifyCheckbox = document.getElementById('minify');
+			const preCacheCheckbox = document.getElementById('pre-cache');
+			const dxdUrlInput = document.getElementById('dxd-url');
+			const versionSelect = document.getElementById('version-select');
+			const commitSelect = document.getElementById('commit-select');
+			const versionContainer = document.getElementById('version-container');
+			const commitContainer = document.getElementById('commit-container');
+			const notification = document.getElementById('notification');
+
+			let currentRepo = '';
+			let currentOwner = '';
+			let fetchTimeout = null;
+			let convertTimeout = null;
+			let notificationTimeout = null;
+
+			// Ensure minify is checked by default
+			minifyCheckbox.checked = true;
+
+			// Handle version type radio buttons
+			document.querySelectorAll('input[name="version-type"]').forEach((radio) => {
+				radio.addEventListener('change', (e) => {
+					if (e.target.value === 'version') {
+						versionContainer.classList.remove('hidden');
+						commitContainer.classList.add('hidden');
+						// Auto-select the first version (latest) if available
+						if (versionSelect.options.length > 1) {
+							versionSelect.selectedIndex = 1; // Index 1 is the first version after the placeholder
+						}
+					} else {
+						versionContainer.classList.add('hidden');
+						commitContainer.classList.remove('hidden');
+					}
+					convertUrl(); // Convert URL when switching between version types
+				});
+			});
+
+			function showNotification(message, isError = false) {
+				if (notificationTimeout) {
+					clearTimeout(notificationTimeout);
+				}
+				notification.textContent = message;
+				notification.classList.remove('success', 'error');
+				notification.classList.add(isError ? 'error' : 'success', 'show');
+				notificationTimeout = setTimeout(() => {
+					notification.classList.remove('show');
+				}, 3000);
+			}
+
+			function copyUrl() {
+				if (dxdUrlInput.value) {
+					dxdUrlInput.select();
+					document.execCommand('copy');
+					showNotification('URL copied to clipboard');
+				}
+			}
+
+			async function fetchRepoInfo() {
+				const url = inputUrl.value;
+				if (!url) return;
+
+				// Check if it's already a DXD CDN URL
+				if (url.includes('cdn.designxdevelop.com')) {
+					showNotification('This is already a DXD CDN URL', true);
+					return;
+				}
+
+				// Handle JSDelivr URLs directly without fetching repo info
+				if (url.includes('jsdelivr.net')) {
+					const match = url.match(/cdn\.jsdelivr\.net\/gh\/([^\/]+)\/([^@\/]+)@([^\/]+)\/(.+)/);
+					if (match) {
+						const [, owner, repo, version, path] = match;
+						currentOwner = owner;
+						currentRepo = repo;
+
+						let targetPath = path;
+						if (minifyCheckbox.checked && (path.endsWith('.js') || path.endsWith('.css'))) {
+							const ext = path.split('.').pop();
+							targetPath = path.slice(0, -ext.length) + 'min.' + ext;
+						}
+
+						const dxdUrl = `https://cdn.designxdevelop.com/${repo}/${version}/${targetPath}`;
+						dxdUrlInput.value = dxdUrl;
+						await handleUrlGenerated(dxdUrl);
+						return;
+					}
+					showNotification('Invalid JSDelivr URL format', true);
+					return;
+				}
+
+				// Handle GitHub URLs
+				const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+				if (!match) {
+					showNotification('Invalid URL format', true);
+					return;
+				}
+
+				const [, owner, repo] = match;
+				if (owner === currentOwner && repo === currentRepo) return;
+
+				currentOwner = owner;
+				currentRepo = repo;
+
+				try {
+					// Fetch versions (releases)
+					const releasesResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`);
+					const releases = await releasesResponse.json();
+
+					// Fetch commits
+					const commitsResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits`);
+					const commits = await commitsResponse.json();
+
+					if (!commits.length && !releases.length) {
+						showNotification('No commits or releases found in the repository', true);
+						return;
+					}
+
+					// Update version select with just the versions
+					versionSelect.innerHTML = `
+						<option value="">Select a version...</option>
+						${releases
+							.map(
+								(release) => `
+							<option value="${release.tag_name}">${release.tag_name}</option>
+						`
+							)
+							.join('')}
+					`;
+
+					// Update commit select with short hashes and messages
+					commitSelect.innerHTML = `
+						<option value="">Select a commit...</option>
+						${commits
+							.map(
+								(commit, index) => `
+							<option value="${commit.sha.substring(0, 7)}" ${index === 0 ? 'selected' : ''}>${commit.sha.substring(0, 7)} - ${
+									commit.commit.message.split('\n')[0]
+								}</option>
+						`
+							)
+							.join('')}
+					`;
+
+					// After loading data, trigger URL conversion for GitHub URLs
+					convertUrl();
+				} catch (error) {
+					console.error('Error fetching repository information:', error);
+					showNotification('Error fetching repository information', true);
+				}
+			}
+
+			async function handleUrlGenerated(dxdUrl, shouldCopy = true) {
+				if (shouldCopy) {
+					copyUrl();
+				}
+
+				// Pre-cache if option is checked
+				if (preCacheCheckbox.checked) {
+					await checkAndPreCache(dxdUrl);
+				}
+			}
+
+			async function checkAndPreCache(dxdUrl) {
+				showNotification('Checking file status...', false);
+				try {
+					// Convert CDN URL back to GitHub URL for pre-caching
+					const [, repo, version, path] = dxdUrl.match(/cdn\.designxdevelop\.com\/([^\/]+)\/([^\/]+)\/(.+)/);
+					const githubUrl = `https://raw.githubusercontent.com/${currentOwner}/${repo}/${version}/${path}`;
+
+					const response = await fetch(dxdUrl, {
+						method: 'HEAD',
+						headers: {
+							'X-Pre-Cache': 'true',
+							'X-GitHub-URL': githubUrl,
+						},
+					});
+
+					// Check the X-Cache header to see if file was served from cache
+					const cacheStatus = response.headers.get('X-Cache');
+
+					if (response.ok) {
+						if (cacheStatus && cacheStatus.includes('HIT')) {
+							showNotification('File already exists in CDN');
+						} else {
+							showNotification('File pre-cached successfully');
+						}
+					} else {
+						showNotification('Error pre-caching file', true);
+					}
+				} catch (error) {
+					console.error('Pre-cache error:', error);
+					showNotification('Error pre-caching file', true);
+				}
+			}
+
+			async function convertUrl() {
+				const url = inputUrl.value;
+				if (!url) return;
+
+				let match;
+
+				if (url.includes('jsdelivr.net')) {
+					// JSDelivr URLs are handled in fetchRepoInfo
+					return;
+				} else {
+					match = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/blob\/[^\/]+\/(.+)/);
+				}
+
+				if (!match) {
+					showNotification('Invalid URL format', true);
+					return;
+				}
+
+				const [, , repo, path] = match;
+				const isVersion = document.querySelector('input[name="version-type"]:checked').value === 'version';
+				let targetVersion = isVersion ? versionSelect.value : commitSelect.value;
+
+				if (!targetVersion) return; // Skip if no version/commit selected
+
+				let targetPath = path;
+				if (minifyCheckbox.checked && (path.endsWith('.js') || path.endsWith('.css'))) {
+					const ext = path.split('.').pop();
+					targetPath = path.slice(0, -ext.length) + 'min.' + ext;
+				}
+
+				const dxdUrl = `https://cdn.designxdevelop.com/${repo}/${targetVersion}/${targetPath}`;
+				const previousUrl = dxdUrlInput.value;
+				dxdUrlInput.value = dxdUrl;
+
+				// Only handle if the URL has changed
+				if (previousUrl !== dxdUrl) {
+					await handleUrlGenerated(dxdUrl);
+				}
+			}
+
+			// Add input event listener with debounce for fetching repo info
+			inputUrl.addEventListener('input', () => {
+				if (fetchTimeout) {
+					clearTimeout(fetchTimeout);
+				}
+				fetchTimeout = setTimeout(fetchRepoInfo, 500);
+			});
+
+			// Add event listeners for auto-conversion
+			inputUrl.addEventListener('input', () => {
+				if (convertTimeout) {
+					clearTimeout(convertTimeout);
+				}
+				convertTimeout = setTimeout(convertUrl, 700); // Wait a bit longer than fetch
+			});
+
+			versionSelect.addEventListener('change', convertUrl);
+			commitSelect.addEventListener('change', convertUrl);
+			minifyCheckbox.addEventListener('change', convertUrl);
+
+			// Update pre-cache checkbox handler to use the new function
+			preCacheCheckbox.addEventListener('change', async () => {
+				if (preCacheCheckbox.checked && dxdUrlInput.value) {
+					await checkAndPreCache(dxdUrlInput.value);
+				}
+			});
+
+			// Keep the convert button as a manual option
+			document.getElementById('convert').addEventListener('click', convertUrl);
+
+			// Add keyboard shortcut for copying
+			document.addEventListener('keydown', (e) => {
+				if ((e.metaKey || e.ctrlKey) && e.key === 'c' && dxdUrlInput.value) {
+					e.preventDefault();
+					copyUrl();
+				}
+			});
+
+			// Update copy button click handler
+			document.getElementById('copy').addEventListener('click', copyUrl);
+		</script>
+	</body>
+</html>

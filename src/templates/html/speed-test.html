@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>DXD CDN - Speed Test</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+	</head>
+	<body class="bg-gray-50">
+		<div class="min-h-screen flex flex-col">
+			<header class="bg-white shadow">
+				<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+					<h1 class="text-3xl font-bold text-gray-900">DXD CDN Speed Test</h1>
+				</div>
+			</header>
+			<main class="flex-grow">
+				<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+					<div class="px-4 py-6 sm:px-0">
+						<div class="bg-white shadow rounded-lg p-6">
+							<h2 class="text-xl font-semibold mb-4">Compare Load Times</h2>
+							<div class="space-y-4">
+								<div>
+									<label for="jsdelivr-url" class="block text-sm font-medium text-gray-700">JSDelivr URL</label>
+									<input
+										type="text"
+										id="jsdelivr-url"
+										class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+										placeholder="https://cdn.jsdelivr.net/gh/user/repo@version/file"
+									/>
+								</div>
+								<div>
+									<label for="test-count" class="block text-sm font-medium text-gray-700">Number of Tests</label>
+									<select
+										id="test-count"
+										class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+									>
+										<option value="3">3 tests</option>
+										<option value="5" selected>5 tests</option>
+										<option value="10">10 tests</option>
+									</select>
+								</div>
+								<button
+									id="run-test"
+									class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+								>
+									Run Speed Test
+								</button>
+							</div>
+						</div>
+
+						<div id="results" class="mt-8 hidden">
+							<div class="bg-white shadow rounded-lg divide-y divide-gray-200">
+								<div class="p-6">
+									<h3 class="text-lg font-medium text-gray-900">JSDelivr Results</h3>
+									<dl class="mt-4 grid grid-cols-2 gap-4">
+										<div>
+											<dt class="text-sm font-medium text-gray-500">DNS Lookup</dt>
+											<dd id="jsdelivr-dns" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+										<div>
+											<dt class="text-sm font-medium text-gray-500">Connection</dt>
+											<dd id="jsdelivr-connect" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+										<div>
+											<dt class="text-sm font-medium text-gray-500">TTFB</dt>
+											<dd id="jsdelivr-ttfb" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+										<div>
+											<dt class="text-sm font-medium text-gray-500">Download</dt>
+											<dd id="jsdelivr-download" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+										<div class="col-span-2">
+											<dt class="text-sm font-medium text-gray-500">Total Time</dt>
+											<dd id="jsdelivr-total" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+									</dl>
+								</div>
+								<div class="p-6">
+									<h3 class="text-lg font-medium text-gray-900">DXD CDN Results</h3>
+									<dl class="mt-4 grid grid-cols-2 gap-4">
+										<div>
+											<dt class="text-sm font-medium text-gray-500">DNS Lookup</dt>
+											<dd id="dxd-dns" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+										<div>
+											<dt class="text-sm font-medium text-gray-500">Connection</dt>
+											<dd id="dxd-connect" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+										<div>
+											<dt class="text-sm font-medium text-gray-500">TTFB</dt>
+											<dd id="dxd-ttfb" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+										<div>
+											<dt class="text-sm font-medium text-gray-500">Download</dt>
+											<dd id="dxd-download" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+										<div class="col-span-2">
+											<dt class="text-sm font-medium text-gray-500">Total Time</dt>
+											<dd id="dxd-total" class="mt-1 text-sm text-gray-900">-</dd>
+										</div>
+									</dl>
+								</div>
+							</div>
+							<div id="summary" class="mt-4 text-center"></div>
+						</div>
+
+						<div class="mt-8">
+							<a href="/" class="text-indigo-600 hover:text-indigo-500">← Back to Converter</a>
+						</div>
+					</div>
+				</div>
+			</main>
+			<footer class="bg-white border-t border-gray-200">
+				<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+					<p class="text-center text-gray-500 text-sm">DXD CDN - A custom CDN implementation for serving files from GitHub repositories</p>
+				</div>
+			</footer>
+		</div>
+		<script>
+			async function measureTiming(url) {
+				const start = performance.now();
+				const response = await fetch(url);
+				const end = performance.now();
+
+				// Get timing data
+				const entry = performance.getEntriesByName(url).pop();
+				const timing = {
+					dns: Math.round(entry.domainLookupEnd - entry.domainLookupStart),
+					connect: Math.round(entry.connectEnd - entry.connectStart),
+					ttfb: Math.round(entry.responseStart - entry.requestStart),
+					download: Math.round(entry.responseEnd - entry.responseStart),
+					total: Math.round(end - start),
+					server: response.headers.get('server') || 'Unknown',
+					cache: response.headers.get('cf-cache-status') || 'Unknown',
+					size: response.headers.get('content-length') || 'Unknown',
+				};
+
+				// Clear the entry
+				performance.clearResourceTimings();
+
+				return timing;
+			}
+
+			function formatTime(ms) {
+				return `${ms}ms`;
+			}
+
+			function updateResults(cdn, timing) {
+				document.getElementById(`${cdn}-dns`).textContent = formatTime(timing.dns);
+				document.getElementById(`${cdn}-connect`).textContent = formatTime(timing.connect);
+				document.getElementById(`${cdn}-ttfb`).textContent = formatTime(timing.ttfb);
+				document.getElementById(`${cdn}-download`).textContent = formatTime(timing.download);
+				document.getElementById(`${cdn}-total`).textContent = formatTime(timing.total);
+			}
+
+			async function runTest() {
+				const jsdelivrUrl = document.getElementById('jsdelivr-url').value;
+				if (!jsdelivrUrl) {
+					alert('Please enter a JSDelivr URL');
+					return;
+				}
+
+				// Convert to DXD CDN URL
+				const match = jsdelivrUrl.match(/cdn\.jsdelivr\.net\/gh\/{{DEFAULT_GITHUB_OWNER}}\/([^\/]+)@([^\/]+)\/(.+)/);
+				if (!match) {
+					alert('Invalid JSDelivr URL format');
+					return;
+				}
+
+				const [, repo, version, path] = match;
+				const dxdUrl = `https://cdn.designxdevelop.com/${repo}/${version}/${path}`;
+
+				document.getElementById('results').classList.remove('hidden');
+				document.getElementById('run-test').disabled = true;
+				document.getElementById('run-test').textContent = 'Running Tests...';
+
+				const testCount = parseInt(document.getElementById('test-count').value) || 5;
+				let jsdelivrTotal = { dns: 0, connect: 0, ttfb: 0, download: 0, total: 0 };
+				let dxdTotal = { dns: 0, connect: 0, ttfb: 0, download: 0, total: 0 };
+				let jsdelivrServer, dxdServer, jsdelivrCache, dxdCache, jsdelivrSize, dxdSize;
+
+				// Clear browser DNS and connection cache
+				await clearBrowserCache();
+
+				// Warm up both CDNs and wait longer to ensure caches are primed
+				console.log('Warming up CDNs...');
+				const warmupJsdelivr = await measureTiming(jsdelivrUrl);
+				await new Promise((resolve) => setTimeout(resolve, 2000));
+				const warmupDxd = await measureTiming(dxdUrl);
+				await new Promise((resolve) => setTimeout(resolve, 2000));
+
+				// Store initial cache and size information
+				jsdelivrCache = warmupJsdelivr.cache;
+				dxdCache = warmupDxd.cache;
+				jsdelivrSize = warmupJsdelivr.size;
+				dxdSize = warmupDxd.size;
+
+				// Run the actual tests with delays between each test
+				for (let i = 0; i < testCount; i++) {
+					// Add a random delay between tests (2-4 seconds)
+					const delay = 2000 + Math.random() * 2000;
+					await new Promise((resolve) => setTimeout(resolve, delay));
+
+					// Alternate between CDNs to be fair
+					const [timing1, timing2] =
+						i % 2 === 0
+							? [await measureTiming(jsdelivrUrl), await measureTiming(dxdUrl)]
+							: [await measureTiming(dxdUrl), await measureTiming(jsdelivrUrl)];
+
+					// Sum up results for the correct CDN
+					if (i % 2 === 0) {
+						addTiming(jsdelivrTotal, timing1);
+						addTiming(dxdTotal, timing2);
+					} else {
+						addTiming(dxdTotal, timing1);
+						addTiming(jsdelivrTotal, timing2);
+					}
+
+					// Store server locations
+					jsdelivrServer = timing1.server;
+					dxdServer = timing2.server;
+
+					// Update progress
+					document.getElementById('run-test').textContent = `Running Tests... ${Math.round(((i + 1) / testCount) * 100)}%`;
+				}
+
+				// Calculate averages
+				Object.keys(jsdelivrTotal).forEach((key) => {
+					if (key !== 'server') {
+						jsdelivrTotal[key] /= testCount;
+						dxdTotal[key] /= testCount;
+					}
+				});
+
+				// Set the final results
+				jsdelivrTotal.server = jsdelivrServer;
+				jsdelivrTotal.cache = jsdelivrCache;
+				jsdelivrTotal.size = jsdelivrSize;
+				dxdTotal.server = dxdServer;
+				dxdTotal.cache = dxdCache;
+				dxdTotal.size = dxdSize;
+
+				// Update results display
+				updateResults('jsdelivr', jsdelivrTotal);
+				updateResults('dxd', dxdTotal);
+
+				// Show summary with more detailed information
+				const diff = jsdelivrTotal.total - dxdTotal.total;
+				const winner = diff > 0 ? 'DXD CDN' : 'JSDelivr';
+				const percentage = Math.abs((diff / jsdelivrTotal.total) * 100);
+
+				const summary = document.getElementById('summary');
+				summary.innerHTML = `
+                <p class="text-lg font-semibold">🏆 ${winner} was faster!</p>
+                <p class="text-sm text-gray-600">Average difference: ${formatTime(Math.abs(diff))} (${percentage.toFixed(1)}%)</p>
+                <p class="text-sm text-gray-600 mt-2">Cache Status: JSDelivr (${jsdelivrCache}) | DXD (${dxdCache})</p>
+                <p class="text-sm text-gray-600">Server Location: JSDelivr (${jsdelivrServer}) | DXD (${dxdServer})</p>
+                <p class="text-sm text-gray-600">File Size: JSDelivr (${jsdelivrSize}) | DXD (${dxdSize})</p>
+            `;
+
+				document.getElementById('run-test').disabled = false;
+				document.getElementById('run-test').textContent = 'Run Speed Test';
+			}
+
+			// Helper function to add timing results
+			function addTiming(total, timing) {
+				Object.keys(total).forEach((key) => {
+					if (key !== 'server' && key !== 'cache' && key !== 'size') {
+						total[key] += timing[key];
+					}
+				});
+			}
+
+			// Helper function to clear browser cache
+			async function clearBrowserCache() {
+				if (window.caches) {
+					try {
+						const keys = await window.caches.keys();
+						await Promise.all(keys.map((key) => window.caches.delete(key)));
+					} catch (e) {
+						console.warn('Failed to clear browser cache:', e);
+					}
+				}
+				// Clear performance data
+				performance.clearResourceTimings();
+				// Clear DNS cache by adding a timestamp to the URL
+				return new Promise((resolve) => setTimeout(resolve, 1000));
+			}
+
+			document.getElementById('run-test').addEventListener('click', runTest);
+		</script>
+	</body>
+</html>
