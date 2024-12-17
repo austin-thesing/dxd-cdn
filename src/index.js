@@ -214,6 +214,7 @@ async function getFileFromGitHub(repo, version, filePath, env, ctx, shouldMinify
 	const extension = filePath.split('.').pop().toLowerCase();
 	const processedContent = shouldMinify ? await minifyContent(content, extension) : content;
 
+	// Store in R2 with text content type for both regular and minified versions
 	const r2Key = `${repo}/${actualVersion}/${filePath}${shouldMinify ? '.min' : ''}`;
 	ctx.waitUntil(
 		(async () => {
@@ -230,13 +231,6 @@ async function getFileFromGitHub(repo, version, filePath, env, ctx, shouldMinify
 		})()
 	);
 
-	// Only compress if specifically requested by a script/link tag
-	const acceptHeader = request.headers.get('Accept') || '';
-	const isScriptRequest =
-		acceptHeader.includes('application/javascript') || acceptHeader.includes('text/javascript') || acceptHeader.includes('text/css');
-
-	// Prepare response with optional compression
-	let responseContent = processedContent;
 	const headers = {
 		'Content-Type': CONTENT_TYPES[extension] || 'text/plain; charset=utf-8',
 		Vary: 'Accept-Encoding, Accept',
@@ -244,16 +238,20 @@ async function getFileFromGitHub(repo, version, filePath, env, ctx, shouldMinify
 		'Content-Disposition': 'inline',
 	};
 
-	// Only compress if it's a script/link request and client supports gzip
+	// Only compress if specifically requested by a script/link tag
+	const acceptHeader = request.headers.get('Accept') || '';
+	const isScriptRequest =
+		acceptHeader.includes('application/javascript') || acceptHeader.includes('text/javascript') || acceptHeader.includes('text/css');
+
 	if (isScriptRequest && request.headers.get('Accept-Encoding')?.includes('gzip')) {
-		const compressedContent = await compress(responseContent, 'gzip');
+		const compressedContent = await compress(processedContent, 'gzip');
 		if (compressedContent) {
-			responseContent = compressedContent;
 			headers['Content-Encoding'] = 'gzip';
+			return new Response(compressedContent, { headers });
 		}
 	}
 
-	return new Response(responseContent, { headers });
+	return new Response(processedContent, { headers });
 }
 
 // HTML template for the converter portal
@@ -919,11 +917,22 @@ async function handleR2Response(r2Object, extension, request) {
 	const isScriptRequest =
 		acceptHeader.includes('application/javascript') || acceptHeader.includes('text/javascript') || acceptHeader.includes('text/css');
 
-	// Get content length before any transformations
-	const contentLength = r2Object.size;
+	// Determine if it's a text file (including .min.js and .min.css)
+	const isTextFile =
+		extension in CONTENT_TYPES &&
+		(CONTENT_TYPES[extension].includes('text') ||
+			CONTENT_TYPES[extension].includes('javascript') ||
+			CONTENT_TYPES[extension].includes('json'));
 
-	// Stream the response instead of loading it all into memory
-	let responseBody = r2Object.body;
+	// Always get text content for text files
+	let responseBody;
+	if (isTextFile) {
+		// Force text content for browser viewing
+		responseBody = await r2Object.text();
+	} else {
+		responseBody = r2Object.body;
+	}
+
 	let headers = new Headers({
 		'Content-Type': CONTENT_TYPES[extension] || 'text/plain; charset=utf-8',
 		Vary: 'Accept-Encoding, Accept',
@@ -934,25 +943,17 @@ async function handleR2Response(r2Object, extension, request) {
 		'Cache-Control': 'public, max-age=31536000, immutable',
 		'CDN-Cache-Control': 'max-age=31536000',
 		'Cloudflare-CDN-Cache-Control': 'max-age=31536000',
-		'Content-Length': contentLength,
 		'Access-Control-Allow-Origin': '*',
 		'Access-Control-Expose-Headers': 'Content-Length, Content-Type, ETag',
-		'CF-Cache-Control': 'max-age=31536000',
-		'Edge-Control': 'cache-maxage=31536000',
-		'Surrogate-Control': 'max-age=31536000',
-		Priority: 'high',
 	});
 
-	// Early compression for text-based files
-	if ((isScriptRequest || extension === 'js' || extension === 'css') && request.headers.get('Accept-Encoding')?.includes('gzip')) {
-		const cs = new CompressionStream('gzip');
-		const writer = cs.writable.getWriter();
-		writer.write(await r2Object.arrayBuffer());
-		writer.close();
-		responseBody = cs.readable;
-		headers.set('Content-Encoding', 'gzip');
-		// Remove content-length as it's no longer accurate after compression
-		headers.delete('Content-Length');
+	// Only compress for script/link tags that accept gzip
+	if (isScriptRequest && request.headers.get('Accept-Encoding')?.includes('gzip')) {
+		const compressedContent = await compress(responseBody, 'gzip');
+		if (compressedContent) {
+			responseBody = compressedContent;
+			headers.set('Content-Encoding', 'gzip');
+		}
 	}
 
 	return new Response(responseBody, { headers });
@@ -960,29 +961,36 @@ async function handleR2Response(r2Object, extension, request) {
 
 async function handleGitHubResponse(repo, version, filePath, env, ctx, shouldMinify, request) {
 	const response = await getFileFromGitHub(repo, version, filePath, env, ctx, shouldMinify, request);
-	const contentLength = response.headers.get('content-length');
+	const extension = filePath.split('.').pop().toLowerCase();
+
+	// Determine if it's a text file
+	const isTextFile =
+		extension in CONTENT_TYPES &&
+		(CONTENT_TYPES[extension].includes('text') ||
+			CONTENT_TYPES[extension].includes('javascript') ||
+			CONTENT_TYPES[extension].includes('json'));
+
+	// Always get text content for text files
+	let responseBody;
+	if (isTextFile) {
+		responseBody = await response.text();
+	} else {
+		responseBody = response.body;
+	}
 
 	const headers = new Headers(response.headers);
 	headers.set('X-Served-From', 'GitHub');
 	headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 	headers.set('CDN-Cache-Control', 'max-age=31536000');
 	headers.set('Cloudflare-CDN-Cache-Control', 'max-age=31536000');
-	headers.set('CF-Cache-Control', 'max-age=31536000');
-	headers.set('Edge-Control', 'cache-maxage=31536000');
-	headers.set('Surrogate-Control', 'max-age=31536000');
-	headers.set('Priority', 'high');
-
-	if (contentLength) {
-		headers.set('Content-Length', contentLength);
-	}
+	headers.set('Access-Control-Allow-Origin', '*');
 
 	// Add preload hints for common resources
 	if (filePath.endsWith('.js')) {
 		headers.set('Link', '</style.css>; rel=preload; as=style, </script.js>; rel=preload; as=script');
 	}
 
-	// Stream the response
-	return new Response(response.body, {
+	return new Response(responseBody, {
 		headers,
 		status: response.status,
 		statusText: response.statusText,
