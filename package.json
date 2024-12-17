@@ -1,16 +1,17 @@
 {
-  "name": "dxd-cdn",
-  "version": "0.0.0",
-  "private": true,
-  "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
-    "test": "vitest"
-  },
-  "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.5.2",
-    "wrangler": "^3.60.3",
-    "vitest": "2.1.8"
-  }
+	"name": "dxd-cdn",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev"
+	},
+	"dependencies": {
+		"terser": "^5.26.0",
+		"clean-css": "^5.3.3"
+	},
+	"devDependencies": {
+		"wrangler": "^3.0.0"
+	}
 }

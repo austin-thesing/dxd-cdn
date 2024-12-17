@@ -26,15 +26,62 @@ const CONTENT_TYPES = {
 	pdf: 'application/pdf',
 };
 
+// Minification support
+const terser = require('terser');
+const CleanCSS = require('clean-css');
+
 // File types that should be previewed in browser
 const PREVIEW_TYPES = new Set(['pdf', 'html', 'htm', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp']);
 
 // Default GitHub owner
 const DEFAULT_GITHUB_OWNER = 'austin-thesing';
 
-// Cache for GitHub release data (in-memory, will reset on worker restart)
+// Cache for GitHub data (in-memory, will reset on worker restart)
 const GITHUB_CACHE = new Map();
 const CACHE_TTL = 300000; // 5 minutes in milliseconds
+
+async function minifyContent(content, extension) {
+	switch (extension) {
+		case 'js':
+			try {
+				const result = await terser.minify(content);
+				return result.code;
+			} catch (error) {
+				console.error('JS minification failed:', error);
+				return content;
+			}
+		case 'css':
+			try {
+				const result = new CleanCSS().minify(content);
+				return result.styles;
+			} catch (error) {
+				console.error('CSS minification failed:', error);
+				return content;
+			}
+		default:
+			return content;
+	}
+}
+
+async function getCommit(repo, commit, env) {
+	// Support both short and full hashes
+	const response = await fetch(`https://api.github.com/repos/${DEFAULT_GITHUB_OWNER}/${repo}/commits/${commit}`, {
+		headers: {
+			'User-Agent': 'DXD-CDN',
+			Authorization: `token ${env.GITHUB_TOKEN}`,
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error('Invalid commit hash');
+	}
+
+	const data = await response.json();
+	return {
+		fullHash: data.sha,
+		shortHash: commit,
+	};
+}
 
 async function getLatestRelease(repo, env) {
 	const cacheKey = `${DEFAULT_GITHUB_OWNER}/${repo}`;
@@ -71,25 +118,44 @@ async function getLatestRelease(repo, env) {
 	return data;
 }
 
-async function getFileFromGitHub(repo, version, filePath, env) {
+async function getFileFromGitHub(repo, version, filePath, env, ctx, shouldMinify = false) {
 	let targetVersion = version;
 	let actualVersion = version;
+	let isCommit = false;
 
 	if (version === 'latest') {
 		const release = await getLatestRelease(repo, env);
 		targetVersion = release.tag_name;
 		actualVersion = targetVersion;
+	} else if (version.length >= 7) {
+		// Support both short (7+) and full (40) commit hashes
+		try {
+			// Validate and get full commit hash
+			const commit = await getCommit(repo, version, env);
+			targetVersion = commit.fullHash;
+			actualVersion = version; // Keep original version for caching
+			isCommit = true;
+		} catch (error) {
+			// If not a valid commit hash, treat as a regular version
+			targetVersion = version;
+			actualVersion = version;
+		}
 	}
 
-	// Remove 'v' prefix if present
-	targetVersion = targetVersion.replace(/^v/, '');
+	// Remove 'v' prefix if present and not a commit hash
+	if (!isCommit) {
+		targetVersion = targetVersion.replace(/^v/, '');
+	}
 
-	// Construct raw GitHub URL
-	const rawUrl = `https://raw.githubusercontent.com/${DEFAULT_GITHUB_OWNER}/${repo}/v${targetVersion}/${filePath}`;
+	// Construct raw GitHub URL based on version type
+	const rawUrl = isCommit
+		? `https://raw.githubusercontent.com/${DEFAULT_GITHUB_OWNER}/${repo}/${targetVersion}/${filePath}`
+		: `https://raw.githubusercontent.com/${DEFAULT_GITHUB_OWNER}/${repo}/v${targetVersion}/${filePath}`;
 
 	const response = await fetch(rawUrl, {
 		headers: {
 			'User-Agent': 'DXD-CDN',
+			Authorization: `token ${env.GITHUB_TOKEN}`,
 		},
 	});
 
@@ -97,16 +163,17 @@ async function getFileFromGitHub(repo, version, filePath, env) {
 		throw new Error('Failed to fetch file from GitHub');
 	}
 
-	// Clone the response before using it (since response.body can only be used once)
-	const clonedResponse = response.clone();
+	// Get the content and potentially minify it
+	const content = await response.text();
+	const extension = filePath.split('.').pop().toLowerCase();
+	const processedContent = shouldMinify ? await minifyContent(content, extension) : content;
 
-	// Store in R2 asynchronously using the simplified path format
-	const r2Key = `${repo}/${actualVersion}/${filePath}`;
+	// Store in R2 asynchronously
+	const r2Key = `${repo}/${actualVersion}/${filePath}${shouldMinify ? '.min' : ''}`;
 	ctx.waitUntil(
 		(async () => {
 			try {
-				const arrayBuffer = await clonedResponse.arrayBuffer();
-				await env.CDN_BUCKET.put(r2Key, arrayBuffer, {
+				await env.CDN_BUCKET.put(r2Key, processedContent, {
 					httpMetadata: {
 						contentType: response.headers.get('content-type'),
 					},
@@ -118,7 +185,11 @@ async function getFileFromGitHub(repo, version, filePath, env) {
 		})()
 	);
 
-	return response;
+	return new Response(processedContent, {
+		headers: {
+			'Content-Type': response.headers.get('content-type'),
+		},
+	});
 }
 
 export default {
@@ -140,7 +211,13 @@ export default {
 
 			const repo = pathParts[0];
 			const version = pathParts[1];
-			const filePath = pathParts.slice(2).join('/');
+			let filePath = pathParts.slice(2).join('/');
+
+			// Check if .min version is requested
+			const shouldMinify = filePath.endsWith('.min.js') || filePath.endsWith('.min.css');
+			if (shouldMinify) {
+				filePath = filePath.replace('.min', '');
+			}
 
 			if (!repo || !version || !filePath) {
 				return new Response('Invalid path format. Use: /repo/version/file-path', { status: 400 });
@@ -151,23 +228,24 @@ export default {
 			const contentType = CONTENT_TYPES[extension] || 'application/octet-stream';
 
 			try {
-				// First try R2 bucket with exact path
-				let r2Object = await env.CDN_BUCKET.get(path);
+				// First try R2 bucket with exact path (including .min if requested)
+				const r2Path = `${repo}/${version}/${filePath}${shouldMinify ? '.min' : ''}`;
+				let r2Object = await env.CDN_BUCKET.get(r2Path);
 
 				// If version is 'latest', also check R2 for the actual version
 				if (!r2Object && version === 'latest') {
 					const release = await getLatestRelease(repo, env);
 					const latestVersion = release.tag_name;
-					const latestPath = `${repo}/${latestVersion}/${filePath}`;
+					const latestPath = `${repo}/${latestVersion}/${filePath}${shouldMinify ? '.min' : ''}`;
 					r2Object = await env.CDN_BUCKET.get(latestPath);
 				}
 
 				if (r2Object) {
 					response = new Response(r2Object.body);
-					console.log(`Served ${path} from R2`);
+					console.log(`Served ${r2Path} from R2`);
 				} else {
-					response = await getFileFromGitHub(repo, version, filePath, env);
-					console.log(`Served ${path} from GitHub`);
+					response = await getFileFromGitHub(repo, version, filePath, env, ctx, shouldMinify);
+					console.log(`Served ${r2Path} from GitHub`);
 				}
 			} catch (error) {
 				return new Response(`File not found: ${error.message}`, { status: 404 });
