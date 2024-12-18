@@ -1,35 +1,17 @@
-import './config/instrument';
 import { handleR2Response, handleGitHubResponse } from './handlers/responses';
 import { getLatestRelease } from './services/github';
 import { handleSpecialPages } from './templates/pages';
 import { CONTENT_TYPES } from './config/constants';
-import { initSentry, captureError, captureMessage } from './config/sentry';
 
 export default {
 	async fetch(request, env, ctx) {
-		// Initialize Sentry
-		initSentry(env);
-
 		try {
 			const url = new URL(request.url);
 			const path = url.pathname.slice(1);
 
-			// Test endpoint for Sentry
-			if (path === '_test/error') {
-				try {
-					throw new Error('Test error from CDN');
-				} catch (error) {
-					captureError(error, {
-						tags: {
-							type: 'test_error',
-						},
-						extra: {
-							url: request.url,
-							method: request.method,
-						},
-					});
-					return new Response('Test error captured', { status: 500 });
-				}
+			// Handle favicon requests
+			if (path === 'favicon.ico') {
+				return new Response(null, { status: 204 });
 			}
 
 			// Handle special pages
@@ -37,8 +19,15 @@ export default {
 				return handleSpecialPages(path);
 			}
 
+			// Handle root URL
 			if (!path) {
-				return new Response('Not Found', { status: 404 });
+				return new Response('DXD CDN is running', {
+					status: 200,
+					headers: {
+						'Content-Type': 'text/plain',
+						'Cache-Control': 'public, max-age=3600',
+					},
+				});
 			}
 
 			// Try to get from cache first with ETag support
@@ -120,31 +109,26 @@ export default {
 
 				return response;
 			} catch (error) {
-				captureError(error, {
-					tags: {
-						type: 'file_fetch_error',
-						extension,
-						source: error.message.includes('R2') ? 'r2' : 'github',
-					},
-					extra: {
-						repo,
-						version,
-						filePath,
-						shouldMinify,
-					},
+				console.error('File fetch error:', {
+					error: error.message,
+					stack: error.stack,
+					repo,
+					version,
+					filePath,
+					extension,
+					shouldMinify,
 				});
 				return new Response(`File not found: ${error.message}`, { status: 404 });
 			}
 		} catch (error) {
-			captureError(error, {
-				tags: {
-					type: 'general_error',
-				},
-				extra: {
-					url: request.url,
-					method: request.method,
-				},
+			console.error('CDN Error:', {
+				error: error.message,
+				stack: error.stack,
+				url: request.url,
+				method: request.method,
+				path: new URL(request.url).pathname,
 			});
+
 			return new Response(`Error: ${error.message}`, { status: 500 });
 		}
 	},

@@ -1,7 +1,6 @@
 import { CONTENT_TYPES } from '../config/constants';
 import { compress } from '../utils/compression';
 import { getFileFromGitHub } from '../services/github';
-import { captureError } from '../config/sentry';
 
 export async function handleR2Response(r2Object, extension, request) {
 	try {
@@ -51,32 +50,12 @@ export async function handleR2Response(r2Object, extension, request) {
 					headers.set('Content-Encoding', 'gzip');
 				}
 			} catch (error) {
-				captureError(error, {
-					tags: {
-						type: 'compression_error',
-						extension,
-						isMinified: String(isMinified),
-					},
-					extra: {
-						key: r2Object.key,
-						contentType: headers.get('Content-Type'),
-					},
-				});
 				// Continue without compression on error
 			}
 		}
 
 		return new Response(responseBody, { headers });
 	} catch (error) {
-		captureError(error, {
-			tags: {
-				type: 'r2_response_error',
-				extension,
-			},
-			extra: {
-				key: r2Object.key,
-			},
-		});
 		throw error; // Re-throw to maintain original error handling
 	}
 }
@@ -122,37 +101,12 @@ export async function handleGitHubResponse(repo, version, filePath, env, ctx, sh
 					headers.set('Content-Encoding', 'gzip');
 				}
 			} catch (error) {
-				captureError(error, {
-					tags: {
-						type: 'compression_error',
-						extension,
-						isMinified: String(isMinified),
-					},
-					extra: {
-						repo,
-						version,
-						filePath,
-						contentType: headers.get('Content-Type'),
-					},
-				});
 				// Continue without compression on error
 			}
 		}
 
 		return new Response(responseBody, { headers });
 	} catch (error) {
-		captureError(error, {
-			tags: {
-				type: 'github_response_error',
-				extension: filePath.split('.').pop().toLowerCase(),
-			},
-			extra: {
-				repo,
-				version,
-				filePath,
-				shouldMinify,
-			},
-		});
 		throw error; // Re-throw to maintain original error handling
 	}
 }

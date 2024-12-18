@@ -9,17 +9,15 @@ routes = [
     { pattern = "cdn.designxdevelop.com", custom_domain = true }
 ]
 
-# Bind an R2 Bucket for CDN storage
+# R2 bucket configuration
 [[r2_buckets]]
 binding = "CDN_BUCKET"
 bucket_name = "dxd-cdn"
 
-# Secret for GitHub API access
-# Add your GitHub token using: wrangler secret put GITHUB_TOKEN
-
-# Secret for Sentry DSN
-# Add your Sentry DSN using: wrangler secret put SENTRY_DSN
-
+# Environment variables
 [vars]
 ENVIRONMENT = "production"
-# Add any other non-secret environment variables here
+
+[observability.logs]
+enabled = true
+invocation_logs = false
