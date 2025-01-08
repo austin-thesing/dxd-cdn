@@ -57,9 +57,15 @@ export default {
 			let filePath = pathParts.slice(2).join('/');
 
 			// Check if .min version is requested
-			const shouldMinify = filePath.endsWith('.min.js') || filePath.endsWith('.min.css');
+			let shouldMinify = filePath.endsWith('.min.js') || filePath.endsWith('.min.css');
 			if (shouldMinify) {
-				filePath = filePath.replace('.min', '');
+				// If the file already has .min in its path, we'll use it as is
+				// and set shouldMinify to false to prevent double minification
+				filePath = filePath;
+				shouldMinify = false;
+			} else {
+				// Check if we need to minify based on the extension
+				shouldMinify = request.headers.get('X-Minify') === 'true' && (filePath.endsWith('.js') || filePath.endsWith('.css'));
 			}
 
 			if (!repo || !version || !filePath) {

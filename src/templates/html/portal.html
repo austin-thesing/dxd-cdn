@@ -352,8 +352,11 @@
 
 				let targetPath = path;
 				if (minifyCheckbox.checked && (path.endsWith('.js') || path.endsWith('.css'))) {
-					const ext = path.split('.').pop();
-					targetPath = path.slice(0, -ext.length) + 'min.' + ext;
+					// Only add .min if it's not already in the path
+					if (!path.includes('.min.')) {
+						const ext = path.split('.').pop();
+						targetPath = path.slice(0, -ext.length) + 'min.' + ext;
+					}
 				}
 
 				const dxdUrl = `https://cdn.designxdevelop.com/${repo}/${targetVersion}/${targetPath}`;
